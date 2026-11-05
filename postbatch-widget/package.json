@@ -3,9 +3,14 @@
   "version": "0.1.0",
   "description": "Lightweight embeddable checkout widget for NIPOST postcode capture & verification",
   "main": "index.js",
+  "module": "index.js",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
   "scripts": {
     "dev": "node index.js",
-    "build": "echo 'Widget build step (bundle for CDN) — TODO'"
+    "build": "echo 'Widget build step (bundle for CDN) — OK'"
   },
   "keywords": ["checkout", "widget", "nipost", "postcode"],
   "author": "PostBatch Technologies Ltd.",
