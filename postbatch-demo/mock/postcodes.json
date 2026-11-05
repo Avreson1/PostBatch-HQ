@@ -1,0 +1,249 @@
+{
+  "meta": {
+    "description": "Fallback mock data for the PostBatch pitch demo. Used when the live NIPOST staging environment is unavailable.",
+    "generated": "2026-11-05",
+    "count": 15
+  },
+  "postcodes": [
+    {
+      "postcode": "LA-101-2001",
+      "state": "Lagos",
+      "lga": "Lagos Mainland",
+      "area": "Ebute Metta",
+      "lat": 6.4831,
+      "lng": 3.3792,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[3.375, 6.480], [3.383, 6.480], [3.383, 6.487], [3.375, 6.487], [3.375, 6.480]]]
+        },
+        "properties": { "postcode": "LA-101-2001", "zone": "LA-101" }
+      }
+    },
+    {
+      "postcode": "LA-101-2002",
+      "state": "Lagos",
+      "lga": "Lagos Mainland",
+      "area": "Yaba",
+      "lat": 6.5095,
+      "lng": 3.3711,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[3.367, 6.506], [3.375, 6.506], [3.375, 6.513], [3.367, 6.513], [3.367, 6.506]]]
+        },
+        "properties": { "postcode": "LA-101-2002", "zone": "LA-101" }
+      }
+    },
+    {
+      "postcode": "LA-101-2003",
+      "state": "Lagos",
+      "lga": "Lagos Mainland",
+      "area": "Surulere",
+      "lat": 6.5010,
+      "lng": 3.3515,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[3.347, 6.497], [3.356, 6.497], [3.356, 6.505], [3.347, 6.505], [3.347, 6.497]]]
+        },
+        "properties": { "postcode": "LA-101-2003", "zone": "LA-101" }
+      }
+    },
+    {
+      "postcode": "LA-200-1001",
+      "state": "Lagos",
+      "lga": "Ikeja",
+      "area": "GRA Ikeja",
+      "lat": 6.5833,
+      "lng": 3.3500,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[3.345, 6.579], [3.355, 6.579], [3.355, 6.588], [3.345, 6.588], [3.345, 6.579]]]
+        },
+        "properties": { "postcode": "LA-200-1001", "zone": "LA-200" }
+      }
+    },
+    {
+      "postcode": "LA-200-1002",
+      "state": "Lagos",
+      "lga": "Ikeja",
+      "area": "Alausa",
+      "lat": 6.6018,
+      "lng": 3.3635,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[3.359, 6.598], [3.368, 6.598], [3.368, 6.606], [3.359, 6.606], [3.359, 6.598]]]
+        },
+        "properties": { "postcode": "LA-200-1002", "zone": "LA-200" }
+      }
+    },
+    {
+      "postcode": "AB-101-1001",
+      "state": "Abia",
+      "lga": "Aba North",
+      "area": "Aba Town Centre",
+      "lat": 5.1066,
+      "lng": 7.3668,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[7.362, 5.102], [7.372, 5.102], [7.372, 5.111], [7.362, 5.111], [7.362, 5.102]]]
+        },
+        "properties": { "postcode": "AB-101-1001", "zone": "AB-101" }
+      }
+    },
+    {
+      "postcode": "AB-101-1002",
+      "state": "Abia",
+      "lga": "Aba North",
+      "area": "Ogbor Hill",
+      "lat": 5.1150,
+      "lng": 7.3750,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[7.370, 5.111], [7.380, 5.111], [7.380, 5.119], [7.370, 5.119], [7.370, 5.111]]]
+        },
+        "properties": { "postcode": "AB-101-1002", "zone": "AB-101" }
+      }
+    },
+    {
+      "postcode": "AB-202-4001",
+      "state": "Abia",
+      "lga": "Umuahia North",
+      "area": "Umuahia Centre",
+      "lat": 5.5260,
+      "lng": 7.4940,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[7.489, 5.522], [7.499, 5.522], [7.499, 5.530], [7.489, 5.530], [7.489, 5.522]]]
+        },
+        "properties": { "postcode": "AB-202-4001", "zone": "AB-202" }
+      }
+    },
+    {
+      "postcode": "KN-100-5001",
+      "state": "Kano",
+      "lga": "Kano Municipal",
+      "area": "Sabon Gari",
+      "lat": 12.0022,
+      "lng": 8.5167,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[8.512, 11.998], [8.522, 11.998], [8.522, 12.006], [8.512, 12.006], [8.512, 11.998]]]
+        },
+        "properties": { "postcode": "KN-100-5001", "zone": "KN-100" }
+      }
+    },
+    {
+      "postcode": "KN-100-5002",
+      "state": "Kano",
+      "lga": "Kano Municipal",
+      "area": "Bompai",
+      "lat": 11.9850,
+      "lng": 8.5350,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[8.530, 11.981], [8.540, 11.981], [8.540, 11.989], [8.530, 11.989], [8.530, 11.981]]]
+        },
+        "properties": { "postcode": "KN-100-5002", "zone": "KN-100" }
+      }
+    },
+    {
+      "postcode": "FC-900-0001",
+      "state": "FCT",
+      "lga": "AMAC",
+      "area": "Central Area",
+      "lat": 9.0580,
+      "lng": 7.4891,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[7.484, 9.054], [7.494, 9.054], [7.494, 9.062], [7.484, 9.062], [7.484, 9.054]]]
+        },
+        "properties": { "postcode": "FC-900-0001", "zone": "FC-900" }
+      }
+    },
+    {
+      "postcode": "FC-900-0002",
+      "state": "FCT",
+      "lga": "AMAC",
+      "area": "Wuse 2",
+      "lat": 9.0726,
+      "lng": 7.4762,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[7.471, 9.069], [7.481, 9.069], [7.481, 9.077], [7.471, 9.077], [7.471, 9.069]]]
+        },
+        "properties": { "postcode": "FC-900-0002", "zone": "FC-900" }
+      }
+    },
+    {
+      "postcode": "RV-110-7001",
+      "state": "Rivers",
+      "lga": "Port Harcourt",
+      "area": "Old GRA",
+      "lat": 4.7731,
+      "lng": 7.0134,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[7.009, 4.769], [7.018, 4.769], [7.018, 4.777], [7.009, 4.777], [7.009, 4.769]]]
+        },
+        "properties": { "postcode": "RV-110-7001", "zone": "RV-110" }
+      }
+    },
+    {
+      "postcode": "OG-301-8001",
+      "state": "Ogun",
+      "lga": "Abeokuta South",
+      "area": "Sapon",
+      "lat": 7.1475,
+      "lng": 3.3487,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[3.344, 7.143], [3.353, 7.143], [3.353, 7.152], [3.344, 7.152], [3.344, 7.143]]]
+        },
+        "properties": { "postcode": "OG-301-8001", "zone": "OG-301" }
+      }
+    },
+    {
+      "postcode": "OG-301-8002",
+      "state": "Ogun",
+      "lga": "Abeokuta South",
+      "area": "Kuto",
+      "lat": 7.1560,
+      "lng": 3.3520,
+      "polygon": {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[3.348, 7.152], [3.357, 7.152], [3.357, 7.160], [3.348, 7.160], [3.348, 7.152]]]
+        },
+        "properties": { "postcode": "OG-301-8002", "zone": "OG-301" }
+      }
+    }
+  ]
+}

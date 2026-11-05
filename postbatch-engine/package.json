@@ -1,0 +1,13 @@
+{
+  "name": "postbatch-engine",
+  "version": "0.1.0",
+  "description": "Server-side NIPOST postcode prefix-clustering algorithm for delivery zone bucketing",
+  "main": "cluster.js",
+  "scripts": {
+    "start": "node cluster.js",
+    "test": "node -e \"const c = require('./cluster.js'); console.log(JSON.stringify(c.clusterByPrefix(c.SAMPLE_POSTCODES), null, 2)); console.log('✓ All clusters generated.');\""
+  },
+  "keywords": ["clustering", "nipost", "logistics", "postcode"],
+  "author": "PostBatch Technologies Ltd.",
+  "license": "UNLICENSED"
+}
