@@ -1,0 +1,422 @@
+[
+  {
+    "orderId": "ORD-1081",
+    "customerName": "Amina Bello",
+    "phone": "08031234567",
+    "item": "Sneakers (Size 42)",
+    "price": 28000,
+    "shippingFee": 1500,
+    "postcode": "FC02A09AA03",
+    "formatted": "FC-02-A09-AA-03",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A09",
+      "area": "AA",
+      "unit": "03"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Wuse",
+      "area": "Zone 1"
+    },
+    "address": "8 Sultan Abubakar Way, Wuse Zone 1, Abuja",
+    "coordinates": {
+      "lat": 9.0685,
+      "lng": 7.4660
+    }
+  },
+  {
+    "orderId": "ORD-1082",
+    "customerName": "Tunde Bakare",
+    "phone": "08029876543",
+    "item": "Smart Fitness Watch",
+    "price": 34500,
+    "shippingFee": 1500,
+    "postcode": "FC02A09AB12",
+    "formatted": "FC-02-A09-AB-12",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A09",
+      "area": "AB",
+      "unit": "12"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Wuse",
+      "area": "Zone 2"
+    },
+    "address": "24 Kashim Ibrahim Way, Wuse Zone 2, Abuja",
+    "coordinates": {
+      "lat": 9.0662,
+      "lng": 7.4705
+    }
+  },
+  {
+    "orderId": "ORD-1083",
+    "customerName": "Fatima Aliyu",
+    "phone": "08145556677",
+    "item": "Wireless ANC Headphones",
+    "price": 42000,
+    "shippingFee": 1500,
+    "postcode": "FC02A09DB09",
+    "formatted": "FC-02-A09-DB-09",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A09",
+      "area": "DB",
+      "unit": "09"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Wuse",
+      "area": "Zone 4"
+    },
+    "address": "12 Marina Road, Wuse Zone 4, Abuja",
+    "coordinates": {
+      "lat": 9.0622,
+      "lng": 7.4721
+    }
+  },
+  {
+    "orderId": "ORD-1084",
+    "customerName": "Chukwudi Eze",
+    "phone": "08051112233",
+    "item": "Mechanical Keyboard",
+    "price": 39000,
+    "shippingFee": 1500,
+    "postcode": "FC02A09EA04",
+    "formatted": "FC-02-A09-EA-04",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A09",
+      "area": "EA",
+      "unit": "04"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Wuse",
+      "area": "Zone 5"
+    },
+    "address": "15 Alex Ekwueme Way, Wuse Zone 5, Abuja",
+    "coordinates": {
+      "lat": 9.0588,
+      "lng": 7.4752
+    }
+  },
+  {
+    "orderId": "ORD-1085",
+    "customerName": "Zainab Mohammed",
+    "phone": "08183334455",
+    "item": "4K Action Camera",
+    "price": 65000,
+    "shippingFee": 2000,
+    "postcode": "FC02A09FA18",
+    "formatted": "FC-02-A09-FA-18",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A09",
+      "area": "FA",
+      "unit": "18"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Wuse",
+      "area": "Wuse 2"
+    },
+    "address": "42 Aminu Kano Crescent, Wuse 2, Abuja",
+    "coordinates": {
+      "lat": 9.0792,
+      "lng": 7.4780
+    }
+  },
+  {
+    "orderId": "ORD-1086",
+    "customerName": "Ngozi Adeleke",
+    "phone": "08077778899",
+    "item": "Portable Blender",
+    "price": 18500,
+    "shippingFee": 1200,
+    "postcode": "FC02A03BA05",
+    "formatted": "FC-02-A03-BA-05",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A03",
+      "area": "BA",
+      "unit": "05"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Garki",
+      "area": "Area 1"
+    },
+    "address": "10 Moshood Abiola Way, Garki Area 1, Abuja",
+    "coordinates": {
+      "lat": 9.0345,
+      "lng": 7.4812
+    }
+  },
+  {
+    "orderId": "ORD-1087",
+    "customerName": "Ibrahim Garba",
+    "phone": "08092223344",
+    "item": "Cordless Car Vacuum",
+    "price": 23000,
+    "shippingFee": 1200,
+    "postcode": "FC02A03BB11",
+    "formatted": "FC-02-A03-BB-11",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A03",
+      "area": "BB",
+      "unit": "11"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Garki",
+      "area": "Area 2"
+    },
+    "address": "22 Tafawa Balewa Way, Garki Area 2, Abuja",
+    "coordinates": {
+      "lat": 9.0310,
+      "lng": 7.4865
+    }
+  },
+  {
+    "orderId": "ORD-1088",
+    "customerName": "Folake Adebayo",
+    "phone": "08129990011",
+    "item": "Bluetooth Soundbar",
+    "price": 54000,
+    "shippingFee": 1800,
+    "postcode": "FC02A03CA02",
+    "formatted": "FC-02-A03-CA-02",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A03",
+      "area": "CA",
+      "unit": "02"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Garki",
+      "area": "Area 3"
+    },
+    "address": "7 Festival Road, Garki Area 3, Abuja",
+    "coordinates": {
+      "lat": 9.0280,
+      "lng": 7.4910
+    }
+  },
+  {
+    "orderId": "ORD-1089",
+    "customerName": "Umar Farouk",
+    "phone": "08034445566",
+    "item": "Anker 20,000mAh PowerBank",
+    "price": 29500,
+    "shippingFee": 1200,
+    "postcode": "FC02A03DA14",
+    "formatted": "FC-02-A03-DA-14",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A03",
+      "area": "DA",
+      "unit": "14"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Garki",
+      "area": "Area 8"
+    },
+    "address": "18 Emeka Anyaoku St, Garki Area 8, Abuja",
+    "coordinates": {
+      "lat": 9.0245,
+      "lng": 7.4975
+    }
+  },
+  {
+    "orderId": "ORD-1090",
+    "customerName": "Blessing Nwachukwu",
+    "phone": "08168887766",
+    "item": "Leather Laptop Briefcase",
+    "price": 32000,
+    "shippingFee": 1500,
+    "postcode": "FC02A03EB07",
+    "formatted": "FC-02-A03-EB-07",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A03",
+      "area": "EB",
+      "unit": "07"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Garki",
+      "area": "Area 11"
+    },
+    "address": "31 Ahmadu Bello Way, Garki Area 11, Abuja",
+    "coordinates": {
+      "lat": 9.0210,
+      "lng": 7.5020
+    }
+  },
+  {
+    "orderId": "ORD-1091",
+    "customerName": "Ahmed Shehu",
+    "phone": "08023331122",
+    "item": "Thermal Coffee Carafe",
+    "price": 16500,
+    "shippingFee": 1200,
+    "postcode": "FC02A01AA01",
+    "formatted": "FC-02-A01-AA-01",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A01",
+      "area": "AA",
+      "unit": "01"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Central Area",
+      "area": "Central Area North"
+    },
+    "address": "2 Herbert Macaulay Way, Central Area, Abuja",
+    "coordinates": {
+      "lat": 9.0550,
+      "lng": 7.4920
+    }
+  },
+  {
+    "orderId": "ORD-1092",
+    "customerName": "Kemi Adeleke",
+    "phone": "08134449988",
+    "item": "Ergonomic Desk Chair",
+    "price": 85000,
+    "shippingFee": 3500,
+    "postcode": "FC02A01AB06",
+    "formatted": "FC-02-A01-AB-06",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A01",
+      "area": "AB",
+      "unit": "06"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Central Area",
+      "area": "Diplomatic Zone"
+    },
+    "address": "14 Constitution Ave, Central Area, Abuja",
+    "coordinates": {
+      "lat": 9.0520,
+      "lng": 7.4985
+    }
+  },
+  {
+    "orderId": "ORD-1093",
+    "customerName": "David Mark",
+    "phone": "08085551234",
+    "item": "Studio Condenser Mic",
+    "price": 47000,
+    "shippingFee": 1500,
+    "postcode": "FC02A01AC15",
+    "formatted": "FC-02-A01-AC-15",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A01",
+      "area": "AC",
+      "unit": "15"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Central Area",
+      "area": "Shehu Shagari Way"
+    },
+    "address": "5 Shehu Shagari Way, Central Area, Abuja",
+    "coordinates": {
+      "lat": 9.0595,
+      "lng": 7.5040
+    }
+  },
+  {
+    "orderId": "ORD-1094",
+    "customerName": "Hauwa Usman",
+    "phone": "08176662345",
+    "item": "Smart Wi-Fi Air Purifier",
+    "price": 62000,
+    "shippingFee": 2500,
+    "postcode": "FC02A01BA08",
+    "formatted": "FC-02-A01-BA-08",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A01",
+      "area": "BA",
+      "unit": "08"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Central Area",
+      "area": "Maitama South"
+    },
+    "address": "19 Aguiyi Ironsi St, Maitama / CBD, Abuja",
+    "coordinates": {
+      "lat": 9.0730,
+      "lng": 7.4950
+    }
+  },
+  {
+    "orderId": "ORD-1095",
+    "customerName": "Oluwaseun Ajayi",
+    "phone": "08091118822",
+    "item": "Noise-Cancelling Earphones",
+    "price": 29000,
+    "shippingFee": 1500,
+    "postcode": "FC02A01BB22",
+    "formatted": "FC-02-A01-BB-22",
+    "segments": {
+      "state": "FC",
+      "lga": "02",
+      "district": "A01",
+      "area": "BB",
+      "unit": "22"
+    },
+    "names": {
+      "state": "Federal Capital Territory",
+      "lga": "Abuja Municipal",
+      "district": "Central Area",
+      "area": "Maitama Heights"
+    },
+    "address": "8 Gana Street, Maitama / CBD, Abuja",
+    "coordinates": {
+      "lat": 9.0835,
+      "lng": 7.4980
+    }
+  }
+]
