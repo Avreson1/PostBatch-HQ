@@ -1,3 +1,77 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    font-feature-settings: 'ss01', 'cv11';
+  }
+
+  /* Thin, quiet scrollbars everywhere */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.28);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.5);
+  }
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+@layer utilities {
+  /* Fully hidden scrollbars (still scrollable) */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Leaflet: match the app's typography and flat corners */
+.leaflet-container {
+  font-family: inherit;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  border-radius: 4px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.18);
+}
+.leaflet-popup-content {
+  margin: 10px 12px;
+}
+.leaflet-bar,
+.leaflet-bar a {
+  border: none !important;
+  border-radius: 3px !important;
+}
+.leaflet-bar {
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.18) !important;
+}
+.leaflet-div-icon,
+.custom-leaflet-marker,
+.rider-gps-marker,
+.building-pin-marker,
+.hub-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+@keyframes pb-ping {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}

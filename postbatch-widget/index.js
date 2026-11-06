@@ -21,6 +21,11 @@
 // ---------------------------------------------------------------------------
 // Merchant Origin Hub (Default: UrbanFootwear NG Hub - Wuse, Abuja Municipal)
 // ---------------------------------------------------------------------------
+// Lucide icons (inline SVG, no dependency)
+const PB_ICON_LOCATE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/></svg>';
+const PB_ICON_LOADER = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+const PB_ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>';
+
 export const DEFAULT_ORIGIN_HUB = {
   postcode: 'FC02A09AA01',
   formatted: 'FC-02-A09-AA-01',
@@ -608,14 +613,14 @@ export class PostBatchWidget {
 
         <div class="pb-actions">
           <button type="button" id="pb-gps-btn" class="pb-btn-gps">
-            <span id="pb-gps-icon">🎯</span>
+            <span id="pb-gps-icon">${PB_ICON_LOCATE}</span>
             <span id="pb-gps-text">Detect My Postcode via GPS</span>
           </button>
         </div>
 
         <div id="pb-sandbox-presets" style="${this._state.sandbox ? 'display:block;' : 'display:none;'}">
           <select id="pb-preset-select" class="pb-preset-select">
-            <option value="" disabled selected>⚡ Quick Preset Postcodes (Offline Sandbox)…</option>
+            <option value="" disabled selected>Quick Preset Postcodes (Offline Sandbox)…</option>
             ${PRESET_POSTCODES.map(
               (p) => `<option value="${p.formatted}">${p.formatted} — ${p.label}</option>`
             ).join('')}
@@ -688,25 +693,25 @@ export class PostBatchWidget {
     this.resolvedBox.style.display = 'block';
     this.resolvedBox.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-weight:700; color:#1e293b;">✓ Verified NIPOST Postcode</span>
+        <span style="font-weight:700; color:#1e293b;; display:flex; align-items:center; gap:6px;"><span style="color:#059669; display:flex;">${PB_ICON_CHECK}</span>Verified NIPOST Postcode</span>
         <span style="font-family:monospace; font-weight:700; color:#2563eb;">${segments.formatted}</span>
       </div>
       <div class="pb-resolved-grid">
         <div class="pb-resolved-chip">
           <span class="label">State</span>
-          <span class="value" title="${names.state}">🏛️ ${names.state} (${segments.state})</span>
+          <span class="value" title="${names.state}">${names.state} (${segments.state})</span>
         </div>
         <div class="pb-resolved-chip">
           <span class="label">LGA</span>
-          <span class="value" title="${names.lga}">🏢 ${names.lga} (${segments.lga})</span>
+          <span class="value" title="${names.lga}">${names.lga} (${segments.lga})</span>
         </div>
         <div class="pb-resolved-chip">
           <span class="label">District (Rider Zone)</span>
-          <span class="value" title="${names.district}">📍 ${names.district} (${segments.district})</span>
+          <span class="value" title="${names.district}">${names.district} (${segments.district})</span>
         </div>
         <div class="pb-resolved-chip">
           <span class="label">Area / Street Cluster</span>
-          <span class="value" title="${names.area}">🏘️ ${names.area} (${segments.area})</span>
+          <span class="value" title="${names.area}">${names.area} (${segments.area})</span>
         </div>
       </div>
       <div class="pb-shipping-pill ${shipping.zoneType}">
@@ -721,13 +726,13 @@ export class PostBatchWidget {
 
   detectGPS() {
     this.gpsBtn.disabled = true;
-    this.gpsIcon.textContent = '⏳';
+    this.gpsIcon.innerHTML = PB_ICON_LOADER;
     this.gpsText.textContent = 'Locating GPS coordinates…';
 
     const finish = (code) => {
       setTimeout(() => {
         this.gpsBtn.disabled = false;
-        this.gpsIcon.textContent = '🎯';
+        this.gpsIcon.innerHTML = PB_ICON_LOCATE;
         this.gpsText.textContent = 'Detect My Postcode via GPS';
         this.setPostcode(code);
       }, 450);

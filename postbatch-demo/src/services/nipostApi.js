@@ -6,8 +6,9 @@
  * Developer Dashboard: https://dashboard.postcode.gov.ng
  *
  * Implements:
- *   1. Live fetch to NIPOST staging endpoint (default: https://api.postcode.gov.ng/v1/lookup)
- *   2. Publishable Key authorization header (X-API-Key and Bearer)
+ *   1. Live calls to the official NIPOST API through the Vite dev proxy
+ *      (/nipost → api.postcode.gov.ng; X-API-Key added server-side)
+ *   2. /v1/lookup (graded L1–L5), /v1/search/reverse, /v1/reference/*
  *   3. Dynamic payload parser mapping state, lga, district, area, coordinates,
  *      and GeoJSON geometry polygon into the PostBatchOrder schema.
  *   4. Graceful offline fallback to local seed orders and mock postcodes when
@@ -26,14 +27,42 @@ import {
 } from 'postbatch-widget';
 import mockPostcodesData from '../../mock/postcodes.json' with { type: 'json' };
 
-// Configuration from environment variables (.env)
-export const NIPOST_API_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_NIPOST_API_URL) ||
-  'https://api.postcode.gov.ng/v1/lookup';
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+// The browser never sees the API key. In dev, Vite proxies /nipost/* to
+// https://api.postcode.gov.ng and attaches X-API-Key server-side
+// (see vite.config.js). Set NIPOST_API_KEY in the repo-root .env.
+// Values injected by vite.config.js `define` (safe facts only, never the key).
+/* global __NIPOST_KEY_CONFIGURED__, __NIPOST_KEY_KIND__, __NIPOST_LOOKUP_LEVEL__ */
+const injected = (name, fallback) => {
+  try {
+    return name === 'configured'
+      ? __NIPOST_KEY_CONFIGURED__
+      : name === 'kind'
+      ? __NIPOST_KEY_KIND__
+      : __NIPOST_LOOKUP_LEVEL__;
+  } catch {
+    return fallback; // running outside Vite (e.g. node test scripts)
+  }
+};
 
-export const NIPOST_API_KEY =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_NIPOST_API_KEY) ||
-  'pb_live_nipost_staging_7f8a92b1';
+/** Public API host (for display only). */
+export const NIPOST_API_URL = 'https://api.postcode.gov.ng';
+
+/** Same-origin path the browser calls; the dev proxy forwards it. */
+const NIPOST_PROXY_BASE = '/nipost/v1';
+
+/** Max lookup level your key is granted (L1 is free: validity only). */
+export const NIPOST_LOOKUP_LEVEL = Number(injected('level', 1)) || 1;
+
+/** Whether a key is configured, and which kind (no secret exposed). */
+export const NIPOST_KEY_CONFIGURED = Boolean(injected('configured', false));
+export const NIPOST_KEY_KIND = injected('kind', '') || '';
+export const NIPOST_IS_TEST_KEY = NIPOST_KEY_KIND.includes('test');
+
+/** @deprecated kept for older imports; the key now lives server-side only. */
+export const NIPOST_API_KEY = '';
 
 /**
  * Generate a GeoJSON bounding-box polygon around coordinates
@@ -249,85 +278,110 @@ export function parseNipostPayloadToOrder(apiData, options = {}) {
   return order;
 }
 
-/**
- * Perform a real fetch request to NIPOST staging API
- * Endpoint: https://api.postcode.gov.ng/v1/lookup
- * Headers: X-API-Key and Authorization: Bearer
- */
-export async function fetchLiveNipostLookup(postcode, timeoutMs = 4500) {
-  const clean = postcode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-  const formatted = formatPostcode(clean);
+// ---------------------------------------------------------------------------
+// Live NIPOST API calls (official endpoints: docs.postcode.gov.ng)
+// ---------------------------------------------------------------------------
 
-  const url = new URL(NIPOST_API_URL);
-  url.searchParams.set('code', formatted);
-  url.searchParams.set('postcode', clean);
-  url.searchParams.set('level', '3');
+export class NipostApiError extends Error {
+  constructor(message, { status = 0, code = 'network_error' } = {}) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
 
+async function nipostGet(path, params = {}, timeoutMs = 4500) {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+  ).toString();
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'X-API-Key': NIPOST_API_KEY,
-        Authorization: `Bearer ${NIPOST_API_KEY}`,
-      },
+    const res = await fetch(`${NIPOST_PROXY_BASE}${path}${qs ? `?${qs}` : ''}`, {
+      headers: { Accept: 'application/json' },
       signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`NIPOST HTTP error ${response.status}: ${response.statusText}`);
+    let body = null;
+    try {
+      body = await res.json();
+    } catch {
+      /* non-JSON (e.g. proxy missing) */
     }
-
-    const payload = await response.json();
-    return payload;
+    if (!res.ok) {
+      throw new NipostApiError(body?.error?.message || `NIPOST HTTP ${res.status}`, {
+        status: res.status,
+        code: body?.error?.code || `http_${res.status}`,
+      });
+    }
+    if (!body) throw new NipostApiError('NIPOST returned no JSON (is the dev proxy running?)', { code: 'bad_response' });
+    return body;
   } catch (err) {
-    clearTimeout(timeoutId);
-    throw err;
+    if (err instanceof NipostApiError) throw err;
+    throw new NipostApiError(err.name === 'AbortError' ? 'NIPOST request timed out' : err.message, {
+      code: err.name === 'AbortError' ? 'timeout' : 'network_error',
+    });
+  } finally {
+    clearTimeout(timer);
   }
 }
 
 /**
- * Reverse geocode GPS coordinates via NIPOST live API
+ * GET /v1/lookup — graded postcode lookup.
+ * L1 returns { postcode, valid, status, verified }; L2+ adds administrative_address etc.
  */
-export async function fetchLiveGpsLookup(lat, lng, timeoutMs = 4500) {
-  const url = new URL(NIPOST_API_URL);
-  url.searchParams.set('lat', lat.toString());
-  url.searchParams.set('lng', lng.toString());
-  url.searchParams.set('level', '3');
+export async function fetchLiveNipostLookup(postcode, level = NIPOST_LOOKUP_LEVEL) {
+  const clean = postcode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  return nipostGet('/lookup', { code: formatPostcode(clean), level });
+}
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+/**
+ * GET /v1/search/reverse — nearest active unit to a coordinate (max 250 m).
+ * Returns { found, postcode?, radius_m, ... }.
+ */
+export async function fetchLiveGpsLookup(lat, lng, maxDistanceM = 250) {
+  return nipostGet('/search/reverse', { lat, lng, max_distance_m: maxDistanceM });
+}
 
-  try {
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'X-API-Key': NIPOST_API_KEY,
-        Authorization: `Bearer ${NIPOST_API_KEY}`,
-      },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`NIPOST GPS lookup HTTP error ${response.status}`);
-    }
-
-    const payload = await response.json();
-    return payload;
-  } catch (err) {
-    clearTimeout(timeoutId);
-    throw err;
+// Reference catalogue (free, no credits): states → LGAs → districts → areas.
+const refCache = new Map();
+async function cachedRef(key, path, params) {
+  if (!refCache.has(key)) {
+    refCache.set(
+      key,
+      nipostGet(path, params).catch((err) => {
+        refCache.delete(key);
+        throw err;
+      })
+    );
   }
+  return refCache.get(key);
+}
+
+/**
+ * Check each segment of a postcode against NIPOST's official reference
+ * catalogue. Works on every key (free), so a test key can still prove the
+ * state / LGA / district / area exist even when the building unit is not
+ * in its dataset.
+ */
+export async function checkHierarchyLive(segments) {
+  const { state, lga, district, area } = segments || {};
+  const [states, lgas, districts, areas] = await Promise.all([
+    cachedRef('states', '/reference/states', {}),
+    state ? cachedRef(`lgas:${state}`, '/reference/lgas', { state }) : null,
+    state && lga ? cachedRef(`districts:${state}:${lga}`, '/reference/districts', { state, lga }) : null,
+    state && lga && district
+      ? cachedRef(`areas:${state}:${lga}:${district}`, '/reference/areas', { state, lga, district })
+      : null,
+  ]);
+  const stateRow = states?.data?.states?.find((s) => s.code === state);
+  const lgaRow = lgas?.data?.lgas?.find((l) => l.code === lga);
+  return {
+    state: Boolean(stateRow),
+    lga: Boolean(lgaRow),
+    district: Boolean(districts?.data?.districts?.some((d) => d.code === district)),
+    area: Boolean(areas?.data?.areas?.some((a) => a.code === area)),
+    names: { state: stateRow?.name || null, lga: lgaRow?.name || null },
+  };
 }
 
 /**
@@ -421,15 +475,22 @@ export function lookupPostcodeOffline(postcode, options = {}) {
 }
 
 /**
- * Unified Postcode Verification Function
+ * Unified postcode verification
+ * ==============================
  *
- * If isLiveMode is true:
- *   - Attempts real fetch to NIPOST staging API with publishable key headers
- *   - If network or staging server drops, gracefully catches the error and
- *     falls back to local seed database so the pitch never breaks.
+ * Live mode asks the official NIPOST API two things in parallel:
+ *   1. /v1/lookup  — is this exact building postcode in the registry?
+ *   2. /v1/reference/* — do its state, LGA, district and area exist?
  *
- * If isLiveMode is false:
- *   - Uses local seed database directly.
+ * The result always carries a `nipost` object describing what NIPOST
+ * actually confirmed, so the UI can say so honestly:
+ *   status: 'verified'        → NIPOST confirmed the full postcode
+ *           'not_in_registry' → reachable, but this unit isn't in the key's dataset
+ *           'unavailable'     → API unreachable / key problem → offline data
+ *           'offline'         → Test mode, API not called
+ *
+ * Address details (coordinates, names for routing) come from PostBatch's
+ * local data, because L1 keys return validity only.
  */
 export async function verifyPostcode({
   code,
@@ -443,118 +504,129 @@ export async function verifyPostcode({
     return { success: false, error: 'Postcode is incomplete' };
   }
 
-  const options = {
-    inputCode: code,
-    streetAddress,
-    customerName,
-    phone,
-  };
+  const options = { inputCode: code, streetAddress, customerName, phone };
+  const local = lookupPostcodeOffline(code, options);
 
-  if (isLiveMode) {
-    try {
-      const apiResponse = await fetchLiveNipostLookup(code);
-      const parsedOrder = parseNipostPayloadToOrder(apiResponse, {
-        ...options,
-        apiSource: 'live_nipost_staging',
-      });
-
-      return {
-        success: true,
-        payload: parsedOrder,
-        isLive: true,
-        fallbackTriggered: false,
-        source: 'Live NIPOST Staging API',
-      };
-    } catch (err) {
-      console.warn(
-        `[PostBatch] Live NIPOST staging API request failed (${err.message}). Gracefully falling back to local seed data for pitch presentation.`
-      );
-
-      const fallbackOrder = lookupPostcodeOffline(code, options);
-      if (fallbackOrder) {
-        return {
+  if (!isLiveMode) {
+    return local
+      ? {
           success: true,
-          payload: fallbackOrder,
+          payload: local,
+          isLive: false,
+          fallbackTriggered: false,
+          source: 'Test mode (local data)',
+          nipost: { status: 'offline' },
+        }
+      : { success: false, error: 'Could not resolve postcode offline' };
+  }
+
+  const segments = parse5SegmentPostcode(formatPostcode(clean));
+  const [lookupRes, hierarchyRes] = await Promise.allSettled([
+    fetchLiveNipostLookup(code),
+    segments ? checkHierarchyLive(segments) : Promise.reject(new Error('Malformed postcode')),
+  ]);
+
+  // API unreachable or key rejected → offline data, say why
+  if (lookupRes.status === 'rejected') {
+    const err = lookupRes.reason;
+    console.warn(`[PostBatch] NIPOST lookup failed (${err.code || ''} ${err.message}). Using local data.`);
+    return local
+      ? {
+          success: true,
+          payload: { ...local, apiSource: 'offline_fallback' },
           isLive: false,
           fallbackTriggered: true,
           fallbackReason: err.message,
-          source: 'Offline Fallback (Staging dropped)',
-        };
-      }
-      return {
-        success: false,
-        error: `Live API request failed (${err.message}) and no offline fallback available.`,
-      };
-    }
+          source: 'NIPOST unavailable · local data',
+          nipost: {
+            status: 'unavailable',
+            errorCode: err.code,
+            error: err.message,
+            hierarchy: hierarchyRes.status === 'fulfilled' ? hierarchyRes.value : null,
+          },
+        }
+      : { success: false, error: `NIPOST unavailable (${err.message}) and no local data for this code.` };
   }
 
-  // Offline Fallback Mode
-  const fallbackOrder = lookupPostcodeOffline(code, options);
-  if (fallbackOrder) {
-    return {
-      success: true,
-      payload: fallbackOrder,
-      isLive: false,
-      fallbackTriggered: false,
-      source: 'Offline Fallback (Local Seeds)',
-    };
-  }
+  const data = lookupRes.value?.data || {};
+  const hierarchy = hierarchyRes.status === 'fulfilled' ? hierarchyRes.value : null;
+  const verified = data.valid === true;
 
-  return { success: false, error: 'Could not resolve postcode offline' };
-}
-
-/**
- * Unified GPS Postcode Detection
- */
-export async function detectPostcodeViaGPS({
-  lat,
-  lng,
-  isLiveMode = true,
-  streetAddress = '',
-}) {
-  const options = { streetAddress };
-
-  if (isLiveMode) {
-    try {
-      const apiResponse = await fetchLiveGpsLookup(lat, lng);
-      const parsedOrder = parseNipostPayloadToOrder(apiResponse, {
-        ...options,
-        apiSource: 'live_nipost_staging',
-      });
-
-      return {
-        success: true,
-        payload: parsedOrder,
-        isLive: true,
-        fallbackTriggered: false,
-        source: 'Live NIPOST Staging GPS',
-      };
-    } catch (err) {
-      console.warn(
-        `[PostBatch] Live GPS reverse lookup failed (${err.message}). Using local coordinate resolution.`
-      );
-    }
-  }
-
-  // Offline resolution for GPS
-  // Default to Abuja Municipal Wuse Zone 4 (or Lagos if lat ~ 6.5)
-  const isLagos = lat < 7.0;
-  const fallbackCode = isLagos ? 'LA-101-2001' : 'FC-02-A09-DB-09';
-  const fallbackAddr = isLagos
-    ? 'Ebute Metta, Lagos Mainland, Lagos'
-    : '12 Marina Road, Wuse Zone 4, Abuja';
-
-  const fallbackOrder = lookupPostcodeOffline(fallbackCode, {
-    ...options,
-    streetAddress: streetAddress || fallbackAddr,
-  });
+  // Build the order from local data, then overlay what NIPOST returned
+  const base =
+    local ||
+    parseNipostPayloadToOrder({ postcode: data.postcode || code }, { ...options, apiSource: 'live_nipost' });
+  const admin = data.administrative_address || {};
+  const payload = {
+    ...base,
+    names: {
+      ...base.names,
+      state: admin.state_name || hierarchy?.names?.state || base.names?.state,
+      lga: admin.lga_name || hierarchy?.names?.lga || base.names?.lga,
+    },
+    address: streetAddress || data.recent_house_address?.recent || base.address,
+    verified,
+    apiSource: verified ? 'live_nipost' : 'live_nipost_unit_not_found',
+  };
 
   return {
     success: true,
-    payload: fallbackOrder,
+    payload,
+    isLive: true,
+    fallbackTriggered: !verified,
+    source: verified ? 'Verified by NIPOST' : 'NIPOST: unit not in registry',
+    nipost: {
+      status: verified ? 'verified' : 'not_in_registry',
+      apiStatus: data.status || null,
+      level: NIPOST_LOOKUP_LEVEL,
+      hierarchy,
+    },
+  };
+}
+
+/**
+ * GPS → postcode: NIPOST reverse geocode first, then verify the result.
+ * If no NIPOST unit is within 250 m (or the API is down), falls back to the
+ * nearest PostBatch demo postcode and says so.
+ */
+export async function detectPostcodeViaGPS({ lat, lng, isLiveMode = true, streetAddress = '' }) {
+  const isLagos = lat < 7.0;
+  const fallbackCode = isLagos ? 'LA-101-2001' : 'FC-02-A09-DB-09';
+  const fallbackAddr = isLagos ? 'Ebute Metta, Lagos Mainland, Lagos' : '12 Marina Road, Wuse Zone 4, Abuja';
+
+  if (isLiveMode) {
+    try {
+      const rev = await fetchLiveGpsLookup(lat, lng);
+      const found = rev?.data?.found && (rev.data.postcode || rev.data.unit?.postcode);
+      if (found) {
+        const result = await verifyPostcode({ code: found, isLiveMode: true, streetAddress });
+        return { ...result, source: `NIPOST reverse geocode · ${result.source}` };
+      }
+      // Reachable, but nothing within range for this key
+      const result = await verifyPostcode({
+        code: fallbackCode,
+        isLiveMode: true,
+        streetAddress: streetAddress || fallbackAddr,
+      });
+      return {
+        ...result,
+        fallbackTriggered: true,
+        fallbackReason: `No NIPOST unit within ${rev?.data?.radius_m ?? 250} m`,
+        nipost: { ...result.nipost, reverse: 'no_unit_nearby' },
+      };
+    } catch (err) {
+      console.warn(`[PostBatch] NIPOST reverse geocode failed (${err.message}). Using local data.`);
+    }
+  }
+
+  const local = lookupPostcodeOffline(fallbackCode, { streetAddress: streetAddress || fallbackAddr });
+  return {
+    success: true,
+    payload: local,
     isLive: false,
     fallbackTriggered: isLiveMode,
-    fallbackReason: isLiveMode ? 'Staging GPS lookup unreachable' : undefined,
-    source: isLiveMode ? 'Offline Fallback (GPS dropped)' : 'Offline Local GPS',
+    fallbackReason: isLiveMode ? 'NIPOST reverse geocode unreachable' : undefined,
+    source: isLiveMode ? 'NIPOST unavailable · local data' : 'Test mode (local data)',
+    nipost: { status: isLiveMode ? 'unavailable' : 'offline' },
   };
 }
