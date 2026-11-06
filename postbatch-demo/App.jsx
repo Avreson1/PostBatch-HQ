@@ -17,6 +17,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, useMap } fro
 import L from 'leaflet';
 import { clusterOrders, SEED_ORDERS } from 'postbatch-engine';
 import CheckoutView from './CheckoutView.jsx';
+import RiderView from './RiderView.jsx';
 import {
   NIPOST_API_KEY,
   NIPOST_API_URL,
@@ -26,6 +27,7 @@ import {
 // Pre-initialize seed orders with GeoJSON delivery polygons
 const INITIAL_SEED_ORDERS = SEED_ORDERS.map((order) => ({
   ...order,
+  status: order.status || 'pending',
   polygon:
     order.polygon ||
     generateBoundingPolygon(
@@ -279,13 +281,21 @@ function FleetDispatchHub({
                             <div className="flex items-center gap-1.5">
                               <span
                                 className="w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-sm"
-                                style={{ backgroundColor: meta.color?.hex || '#4f46e5' }}
+                                style={{
+                                  backgroundColor:
+                                    order.status === 'delivered' ? '#10b981' : meta.color?.hex || '#4f46e5',
+                                }}
                               >
-                                {meta.stopSequence}
+                                {order.status === 'delivered' ? '✓' : meta.stopSequence}
                               </span>
                               <span className="text-[11px] font-semibold text-slate-800">
                                 {meta.districtKey}
                               </span>
+                              {order.status === 'delivered' && (
+                                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.2 rounded">
+                                  Delivered
+                                </span>
+                              )}
                             </div>
                           ) : (
                             <span className="text-slate-400 italic">Unassigned</span>
@@ -663,6 +673,7 @@ export default function App() {
   const handlePlaceOrder = (newOrder) => {
     const orderWithPolygon = {
       ...newOrder,
+      status: newOrder.status || 'pending',
       polygon:
         newOrder.polygon ||
         generateBoundingPolygon(
@@ -683,6 +694,50 @@ export default function App() {
     setToast({
       message: `Order placed! Postcode ${orderWithPolygon.formatted} routed to Fleet Dispatch Hub.`,
       order: orderWithPolygon,
+    });
+  };
+
+  // Complete Delivery Action (Dispatched from RiderView)
+  const handleCompleteDelivery = (orderId) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.orderId === orderId ? { ...o, status: 'delivered', deliveredAt: new Date().toISOString() } : o
+      )
+    );
+    setBatches((prevBatches) =>
+      prevBatches.map((b) => ({
+        ...b,
+        orders: b.orders.map((o) =>
+          o.orderId === orderId ? { ...o, status: 'delivered', deliveredAt: new Date().toISOString() } : o
+        ),
+      }))
+    );
+    setToast({
+      message: `Delivery completed for Order ${orderId}! Loading next polygon in batch.`,
+    });
+  };
+
+  // Reset Batch Deliveries (Allows easy presentation replay)
+  const handleResetBatchDeliveries = (batchKey = 'FC-02-A09') => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.batchKey === batchKey || o.formatted?.includes(batchKey) || o.segments?.district === 'A09'
+          ? { ...o, status: 'pending' }
+          : o
+      )
+    );
+    setBatches((prevBatches) =>
+      prevBatches.map((b) => ({
+        ...b,
+        orders: b.orders.map((o) =>
+          b.districtKey === batchKey || b.districtKey === 'FC-02-A09'
+            ? { ...o, status: 'pending' }
+            : o
+        ),
+      }))
+    );
+    setToast({
+      message: `Batch ${batchKey} deliveries reset to pending for demonstration.`,
     });
   };
 
@@ -811,6 +866,42 @@ export default function App() {
               {orders.length}
             </span>
           </button>
+
+          {/* Tab 3: Rider Simulator (Motorcycle/Mobile Icon) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('rider')}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              activeTab === 'rider'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {/* Motorcycle/Mobile Icon */}
+              <svg
+                className="w-5 h-5 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="5.5" cy="17.5" r="3.5" />
+                <circle cx="18.5" cy="17.5" r="3.5" />
+                <path d="M15 6h-3.5l-3 6.5h6l2-3.5h2" />
+                <path d="M9 12.5L5.5 17.5" />
+                <circle cx="16" cy="6" r="1" fill="currentColor" />
+              </svg>
+              <span>Rider Simulator</span>
+            </div>
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+              activeTab === 'rider' ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-800 text-slate-400'
+            }`}>
+              Mobile
+            </span>
+          </button>
         </nav>
 
         {/* Sidebar Efficiency Widget */}
@@ -863,10 +954,16 @@ export default function App() {
             <span className="text-slate-300 font-light text-base">/</span>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-700">
-                {activeTab === 'merchant' ? 'Merchant Simulator' : 'Fleet Dispatch Hub'}
+                {activeTab === 'merchant'
+                  ? 'Merchant Simulator'
+                  : activeTab === 'rider'
+                  ? 'Mobile Rider App Simulator'
+                  : 'Fleet Dispatch Hub'}
               </span>
               <span className="hidden sm:inline-block text-[11px] text-slate-400">
-                · NIPOST Digital Postcode Routing
+                {activeTab === 'rider'
+                  ? '· Zero-Call Geofenced Last 100m Delivery'
+                  : '· NIPOST Digital Postcode Routing'}
               </span>
             </div>
           </div>
@@ -999,6 +1096,17 @@ export default function App() {
               setSearchTerm={setSearchTerm}
               isLiveMode={isLiveMode}
               activeTab={activeTab}
+            />
+          )}
+
+          {/* View 3: Mobile Rider App Simulator */}
+          {activeTab === 'rider' && (
+            <RiderView
+              orders={orders}
+              batches={batches}
+              onCompleteDelivery={handleCompleteDelivery}
+              onResetBatchDeliveries={handleResetBatchDeliveries}
+              onNotify={(msg) => setToast({ message: msg })}
             />
           )}
 
