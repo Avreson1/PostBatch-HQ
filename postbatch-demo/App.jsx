@@ -111,7 +111,8 @@ function MapController({ bounds, selectedOrder, activeTab }) {
 // ===========================================================================
 function FleetDispatchHub({
   orders,
-  batches,
+  incomingOrders = orders,
+  batches = [],
   isClustering,
   onRunCluster,
   selectedOrder,
@@ -122,16 +123,63 @@ function FleetDispatchHub({
   setSearchTerm,
   isLiveMode,
   activeTab,
+  hasClustered,
+  isClustered,
 }) {
+  // Identify selected batch if activeBatchKey is set (by districtKey, district name, or batchId)
+  const selectedBatch = useMemo(() => {
+    if (!activeBatchKey || !batches || batches.length === 0) return null;
+    return (
+      batches.find(
+        (b) =>
+          b.districtKey === activeBatchKey ||
+          b.district?.toLowerCase() === activeBatchKey.toLowerCase() ||
+          b.batchId === activeBatchKey ||
+          b.zoneName === activeBatchKey ||
+          b.districtCode === activeBatchKey
+      ) || null
+    );
+  }, [batches, activeBatchKey]);
+
+  // Determine whether clustering has already occurred
+  const isClusteringDone = useMemo(() => {
+    if (typeof hasClustered === 'boolean') return hasClustered;
+    if (typeof isClustered === 'boolean') return isClustered;
+    return Array.isArray(batches) && batches.length > 0;
+  }, [hasClustered, isClustered, batches]);
+
+  // Update table header title according to requirements:
+  // - If a specific zone is selected on the map (e.g., "Wuse"): "{Zone Name} Batch Orders" (e.g., "Wuse Batch Orders")
+  // - Otherwise: "Incoming Orders"
+  const tableTitle = useMemo(() => {
+    if (selectedBatch) {
+      const zoneName =
+        selectedBatch.district ||
+        selectedBatch.names?.district ||
+        selectedBatch.zoneName ||
+        'Zone';
+      return `${zoneName} Batch Orders`;
+    }
+    if (activeBatchKey) {
+      return `${activeBatchKey} Batch Orders`;
+    }
+    return 'Incoming Orders';
+  }, [selectedBatch, activeBatchKey]);
+
+  // Filter batches displayed on GIS Leaflet map
   const displayedBatches = useMemo(() => {
-    if (!activeBatchKey) return batches;
-    return batches.filter((b) => b.districtKey === activeBatchKey);
+    if (!activeBatchKey) return batches || [];
+    return (batches || []).filter(
+      (b) =>
+        b.districtKey === activeBatchKey ||
+        b.district?.toLowerCase() === activeBatchKey.toLowerCase()
+    );
   }, [batches, activeBatchKey]);
 
   const mapBounds = useMemo(() => {
     const coords = [];
     for (const b of displayedBatches) {
-      for (const o of b.orders) {
+      for (const o of b.orders || []) {
         if (o.coordinates?.lat && o.coordinates?.lng) {
           coords.push([o.coordinates.lat, o.coordinates.lng]);
         }
@@ -144,7 +192,7 @@ function FleetDispatchHub({
     const meta = new Map();
     if (batches) {
       for (const batch of batches) {
-        for (const order of batch.orders) {
+        for (const order of batch.orders || []) {
           meta.set(order.orderId, {
             batchId: batch.batchId,
             districtKey: batch.districtKey,
@@ -158,24 +206,58 @@ function FleetDispatchHub({
     return meta;
   }, [batches]);
 
-  const filteredOrders = useMemo(() => {
-    let list = orders;
-    if (activeBatchKey) {
-      list = list.filter((o) => o.batchKey === activeBatchKey);
+  // Determine table data source according to requirements:
+  // 1. If a specific zone is selected on the map: populate with orders belonging to that clustered batch
+  // 2. If "All Zones" is selected AND clustering has occurred: display all orders from all dispatched batches
+  // 3. If "All Zones" is selected and clustering has NOT occurred: display raw incomingOrders
+  const baseOrders = useMemo(() => {
+    if (selectedBatch) {
+      return selectedBatch.orders || [];
     }
-    if (!searchTerm) return list;
+
+    if (activeBatchKey) {
+      const matched = (batches || []).find(
+        (b) =>
+          b.districtKey === activeBatchKey ||
+          b.district?.toLowerCase() === activeBatchKey.toLowerCase()
+      );
+      if (matched?.orders) return matched.orders;
+      const rawList = incomingOrders || orders || [];
+      return rawList.filter(
+        (o) =>
+          o.batchKey === activeBatchKey ||
+          o.segments?.district === activeBatchKey ||
+          o.names?.district?.toLowerCase() === activeBatchKey.toLowerCase()
+      );
+    }
+
+    if (isClusteringDone) {
+      const allBatchOrders = (batches || []).flatMap((b) => b.orders || []);
+      if (allBatchOrders.length > 0) {
+        return allBatchOrders;
+      }
+    }
+
+    return incomingOrders || orders || [];
+  }, [selectedBatch, activeBatchKey, isClusteringDone, batches, incomingOrders, orders]);
+
+  // Apply user search filter across displayed orders
+  const filteredOrders = useMemo(() => {
+    if (!searchTerm) return baseOrders;
     const term = searchTerm.toLowerCase();
-    return list.filter(
+    return baseOrders.filter(
       (o) =>
-        o.orderId.toLowerCase().includes(term) ||
-        o.customerName.toLowerCase().includes(term) ||
-        o.item.toLowerCase().includes(term) ||
-        o.formatted.toLowerCase().includes(term) ||
+        o.orderId?.toLowerCase().includes(term) ||
+        o.customerName?.toLowerCase().includes(term) ||
+        o.item?.toLowerCase().includes(term) ||
+        o.formatted?.toLowerCase().includes(term) ||
+        o.postcode?.toLowerCase().includes(term) ||
         o.names?.district?.toLowerCase().includes(term) ||
         o.names?.lga?.toLowerCase().includes(term) ||
+        o.names?.area?.toLowerCase().includes(term) ||
         o.address?.toLowerCase().includes(term)
     );
-  }, [orders, activeBatchKey, searchTerm]);
+  }, [baseOrders, searchTerm]);
 
   return (
     <div className="h-full p-6 overflow-hidden">
@@ -192,7 +274,7 @@ function FleetDispatchHub({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-800">
-                  Incoming Orders
+                  {tableTitle}
                 </h2>
                 <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold px-2 py-0.5 rounded-full">
                   {filteredOrders.length} Parcels
@@ -214,7 +296,9 @@ function FleetDispatchHub({
             {/* Subtitle & Quick Search */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <p className="text-xs text-slate-500">
-                5-segment NIPOST validated postcodes ready for batch dispatch
+                {selectedBatch
+                  ? `${selectedBatch.riderName || 'Rider'} · ${selectedBatch.totalOrders || filteredOrders.length} stops (${selectedBatch.estimatedRouteDistanceKm || 0} km route)`
+                  : '5-segment NIPOST validated postcodes ready for batch dispatch'}
               </p>
             </div>
 
@@ -242,7 +326,7 @@ function FleetDispatchHub({
             </div>
           </div>
 
-          {/* Incoming Orders Data Table */}
+          {/* Orders Data Table */}
           <div className="flex-1 overflow-auto min-h-0">
             <table className="w-full text-left text-xs text-slate-600">
               <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider text-[11px] sticky top-0 z-10 border-b border-slate-200">
@@ -264,6 +348,13 @@ function FleetDispatchHub({
                   filteredOrders.map((order) => {
                     const meta = orderBatchMeta.get(order.orderId);
                     const isSelected = selectedOrder?.orderId === order.orderId;
+                    const stopNum = order.stopSequence ?? meta?.stopSequence;
+                    const batchDistrictKey = order.batchKey || meta?.districtKey || selectedBatch?.districtKey;
+                    const batchColor =
+                      order.status === 'delivered'
+                        ? '#10b981'
+                        : meta?.color?.hex || selectedBatch?.color?.hex || '#4f46e5';
+                    const hasAssignment = Boolean(stopNum !== undefined || meta || order.batchKey);
 
                     return (
                       <tr
@@ -277,19 +368,18 @@ function FleetDispatchHub({
                       >
                         {/* Stop / Batch */}
                         <td className="px-3.5 py-2.5 whitespace-nowrap">
-                          {meta ? (
+                          {hasAssignment ? (
                             <div className="flex items-center gap-1.5">
                               <span
                                 className="w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-sm"
                                 style={{
-                                  backgroundColor:
-                                    order.status === 'delivered' ? '#10b981' : meta.color?.hex || '#4f46e5',
+                                  backgroundColor: batchColor,
                                 }}
                               >
-                                {order.status === 'delivered' ? '✓' : meta.stopSequence}
+                                {order.status === 'delivered' ? '✓' : stopNum}
                               </span>
                               <span className="text-[11px] font-semibold text-slate-800">
-                                {meta.districtKey}
+                                {batchDistrictKey}
                               </span>
                               {order.status === 'delivered' && (
                                 <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.2 rounded">
@@ -311,15 +401,17 @@ function FleetDispatchHub({
                         {/* Postcode */}
                         <td className="px-3.5 py-2.5 whitespace-nowrap font-mono text-[11px]">
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
-                            <span>{order.formatted}</span>
+                            <span>{order.formatted || order.postcode}</span>
                           </span>
                         </td>
 
                         {/* District / LGA */}
                         <td className="px-3.5 py-2.5 whitespace-nowrap">
-                          <div className="font-medium text-slate-800">{order.names?.district}</div>
+                          <div className="font-medium text-slate-800">
+                            {order.names?.district || selectedBatch?.district || '—'}
+                          </div>
                           <div className="text-[11px] text-slate-500 truncate max-w-[120px]" title={order.address}>
-                            {order.names?.area || order.names?.lga}
+                            {order.names?.area || order.names?.lga || selectedBatch?.lga || '—'}
                           </div>
                         </td>
                       </tr>
@@ -619,6 +711,7 @@ export default function App() {
   const [orders, setOrders] = useState(INITIAL_SEED_ORDERS);
   const [batches, setBatches] = useState(() => clusterOrders(INITIAL_SEED_ORDERS));
   const [isClustering, setIsClustering] = useState(false);
+  const [hasClustered, setHasClustered] = useState(true);
   const [activeBatchKey, setActiveBatchKey] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -665,6 +758,7 @@ export default function App() {
     setTimeout(() => {
       const clustered = clusterOrders(ordersList);
       setBatches(clustered);
+      setHasClustered(true);
       setIsClustering(false);
     }, 200);
   };
@@ -1085,7 +1179,9 @@ export default function App() {
           {activeTab === 'fleet' && (
             <FleetDispatchHub
               orders={orders}
+              incomingOrders={orders}
               batches={batches}
+              hasClustered={hasClustered}
               isClustering={isClustering}
               onRunCluster={() => runClustering(orders)}
               selectedOrder={selectedOrder}
