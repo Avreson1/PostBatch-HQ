@@ -157,15 +157,40 @@ function FleetDispatchHub({
   const chosenTotals = drawnTotals(roadPaths);
   const compareTotals = drawnTotals(comparePaths);
 
+  // A zone can be selected by districtKey or district name
+  const matchesBatch = (b, key) =>
+    b.districtKey === key || b.district?.toLowerCase() === String(key).toLowerCase();
+
+  // Batch selected on the map (by districtKey, district name, batchId, zone name or code)
+  const selectedBatch = useMemo(() => {
+    if (!activeBatchKey || !batches?.length) return null;
+    return (
+      batches.find(
+        (b) =>
+          matchesBatch(b, activeBatchKey) ||
+          b.batchId === activeBatchKey ||
+          b.zoneName === activeBatchKey ||
+          b.districtCode === activeBatchKey
+      ) || null
+    );
+  }, [batches, activeBatchKey]);
+
+  // "Wuse Batch Orders" when a zone is selected, otherwise "Incoming Orders"
+  const tableTitle = useMemo(() => {
+    if (selectedBatch) return `${selectedBatch.district || selectedBatch.zoneName || 'Zone'} Batch Orders`;
+    if (activeBatchKey) return `${activeBatchKey} Batch Orders`;
+    return 'Incoming Orders';
+  }, [selectedBatch, activeBatchKey]);
+
   const displayedBatches = useMemo(() => {
-    if (!activeBatchKey) return batches;
-    return batches.filter((b) => b.districtKey === activeBatchKey);
+    if (!activeBatchKey) return batches || [];
+    return (batches || []).filter((b) => matchesBatch(b, activeBatchKey));
   }, [batches, activeBatchKey]);
 
   const mapBounds = useMemo(() => {
     const coords = [[DISPATCH_HUB.coordinates.lat, DISPATCH_HUB.coordinates.lng]];
     for (const b of displayedBatches) {
-      for (const o of b.orders) {
+      for (const o of b.orders || []) {
         if (o.coordinates?.lat && o.coordinates?.lng) coords.push([o.coordinates.lat, o.coordinates.lng]);
       }
     }
@@ -174,8 +199,8 @@ function FleetDispatchHub({
 
   const orderBatchMeta = useMemo(() => {
     const meta = new Map();
-    for (const batch of batches) {
-      for (const order of batch.orders) {
+    for (const batch of batches || []) {
+      for (const order of batch.orders || []) {
         meta.set(order.orderId, {
           districtKey: batch.districtKey,
           riderName: batch.riderName,
@@ -191,18 +216,32 @@ function FleetDispatchHub({
   const statusById = useMemo(() => new Map(orders.map((o) => [o.orderId, o.status])), [orders]);
 
   const filteredOrders = useMemo(() => {
-    let list = orders;
-    if (activeBatchKey) list = list.filter((o) => orderBatchMeta.get(o.orderId)?.districtKey === activeBatchKey);
+    let list = orders || [];
+    if (selectedBatch) {
+      const ids = new Set((selectedBatch.orders || []).map((o) => o.orderId));
+      list = list.filter((o) => ids.has(o.orderId));
+    } else if (activeBatchKey) {
+      // Zone key that matches no batch: fall back to the order's own postcode data
+      list = list.filter(
+        (o) =>
+          orderBatchMeta.get(o.orderId)?.districtKey === activeBatchKey ||
+          o.batchKey === activeBatchKey ||
+          o.segments?.district === activeBatchKey ||
+          o.names?.district?.toLowerCase() === activeBatchKey.toLowerCase()
+      );
+    }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       list = list.filter(
         (o) =>
-          o.orderId.toLowerCase().includes(term) ||
-          o.customerName.toLowerCase().includes(term) ||
-          o.item.toLowerCase().includes(term) ||
-          o.formatted.toLowerCase().includes(term) ||
+          o.orderId?.toLowerCase().includes(term) ||
+          o.customerName?.toLowerCase().includes(term) ||
+          o.item?.toLowerCase().includes(term) ||
+          o.formatted?.toLowerCase().includes(term) ||
+          o.postcode?.toLowerCase().includes(term) ||
           o.names?.district?.toLowerCase().includes(term) ||
           o.names?.lga?.toLowerCase().includes(term) ||
+          o.names?.area?.toLowerCase().includes(term) ||
           o.address?.toLowerCase().includes(term)
       );
     }
@@ -215,7 +254,7 @@ function FleetDispatchHub({
       const d = batchIdx.get(ma.districtKey) - batchIdx.get(mb.districtKey);
       return d !== 0 ? d : ma.stopSequence - mb.stopSequence;
     });
-  }, [orders, batches, activeBatchKey, searchTerm, orderBatchMeta]);
+  }, [orders, batches, selectedBatch, activeBatchKey, searchTerm, orderBatchMeta]);
 
   return (
     <div className="h-full p-5 overflow-hidden">
@@ -226,11 +265,19 @@ function FleetDispatchHub({
         <div className="col-span-12 lg:col-span-5 flex flex-col h-full min-h-0 bg-white rounded-lg shadow-card overflow-hidden">
           <div className="p-4 shrink-0 space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <h2 className="text-[15px] font-semibold text-slate-900 tracking-tight">Incoming Orders</h2>
-                <span className="bg-indigo-50 text-indigo-700 text-[11px] font-semibold px-1.5 py-0.5 rounded">
-                  {filteredOrders.length}
-                </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <h2 className="text-[15px] font-semibold text-slate-900 tracking-tight truncate">{tableTitle}</h2>
+                  <span className="bg-indigo-50 text-indigo-700 text-[11px] font-semibold px-1.5 py-0.5 rounded shrink-0">
+                    {filteredOrders.length}
+                  </span>
+                </div>
+                {selectedBatch && (
+                  <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                    {selectedBatch.riderName || 'Rider'} · {selectedBatch.totalOrders || filteredOrders.length} stops ·{' '}
+                    {(matches(roadPaths, selectedBatch)?.km ?? selectedBatch.estimatedRouteDistanceKm ?? 0).toFixed(1)} km route
+                  </p>
+                )}
               </div>
 
               <motion.button
@@ -333,14 +380,14 @@ function FleetDispatchHub({
                           <div className="text-[11px] text-slate-500 truncate" title={order.customerName}>{order.customerName}</div>
                         </td>
                         <td className="px-2 py-2.5">
-                          <span className="inline-block max-w-full truncate align-middle font-mono text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700" title={order.formatted}>
-                            {order.formatted}
+                          <span className="inline-block max-w-full truncate align-middle font-mono text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700" title={order.formatted || order.postcode}>
+                            {order.formatted || order.postcode}
                           </span>
                         </td>
                         <td className="px-2 pr-4 py-2.5">
-                          <div className="font-medium text-slate-800 truncate">{order.names?.district}</div>
+                          <div className="font-medium text-slate-800 truncate">{order.names?.district || selectedBatch?.district || '—'}</div>
                           <div className="text-[11px] text-slate-500 truncate" title={order.address}>
-                            {order.names?.area || order.names?.lga}
+                            {order.names?.area || order.names?.lga || selectedBatch?.lga || '—'}
                           </div>
                         </td>
                       </motion.tr>
