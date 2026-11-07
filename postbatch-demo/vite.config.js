@@ -15,6 +15,19 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     root: '.',
+    build: {
+      rollupOptions: {
+        output: {
+          // Vendor libraries in their own cached files instead of one 670 kB bundle
+          manualChunks: {
+            react: ['react', 'react-dom'],
+            map: ['leaflet', 'react-leaflet'],
+            motion: ['framer-motion'],
+            icons: ['lucide-react'],
+          },
+        },
+      },
+    },
     envDir: ENV_DIR,
     // Never ship the key to the browser. Vite normally exposes every VITE_*
     // variable to client code, so only PB_PUBLIC_* vars are exposed, and the

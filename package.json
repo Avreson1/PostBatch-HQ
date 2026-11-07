@@ -12,9 +12,10 @@
     "widget": "npm run dev --workspace=postbatch-widget",
     "engine": "npm run start --workspace=postbatch-engine",
     "demo": "npm run dev --workspace=postbatch-demo",
-    "build": "npm run build --workspaces",
+    "build": "npm run build --workspace=postbatch-demo && node scripts/copy-dist.mjs",
     "test": "npm run test --workspaces --if-present",
-    "nipost:check": "node scripts/check-nipost.mjs"
+    "nipost:check": "node scripts/check-nipost.mjs",
+    "build:all": "npm run build --workspaces"
   },
   "keywords": [
     "logistics",
