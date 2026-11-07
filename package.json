@@ -13,9 +13,16 @@
     "engine": "npm run start --workspace=postbatch-engine",
     "demo": "npm run dev --workspace=postbatch-demo",
     "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "nipost:check": "node scripts/check-nipost.mjs"
   },
-  "keywords": ["logistics", "nipost", "postcode", "clustering", "b2b"],
+  "keywords": [
+    "logistics",
+    "nipost",
+    "postcode",
+    "clustering",
+    "b2b"
+  ],
   "author": "PostBatch Technologies Ltd.",
   "license": "UNLICENSED"
 }

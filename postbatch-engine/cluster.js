@@ -14,8 +14,12 @@
  *
  * Clustering Strategy:
  *   Orders are clustered by Postal District (State + LGA + District, e.g. "FC-02-A09").
- *   This forms a dedicated "Rider Batch". Inside each batch, orders are sequentially
- *   sorted by area and unit for optimal multi-stop drop delivery routing.
+ *   This forms a dedicated "Rider Batch". Inside each batch, stops are sequenced
+ *   from the hub with nearest-neighbour + 2-opt to shorten the route.
+ *
+ * Savings are measured, not assumed: the fleet's total route is compared with
+ * manual dispatch (parcels handed out in arrival order to the same number of
+ * riders). Distances are road estimates (Haversine x circuity factor).
  */
 
 // PostBatch Engine — Prefix Clustering Algorithm
@@ -531,11 +535,131 @@ export function parse5SegmentPostcode(postcode) {
 }
 
 // =============================================================================
+// Route Model
+// =============================================================================
+//
+// By default distances are road-distance ESTIMATES: straight-line (Haversine)
+// distance multiplied by an urban circuity factor, so the engine works fully
+// offline. Callers can pass `distanceKm(a, b)` backed by a real road network
+// (e.g. an OSRM distance matrix) and every route + savings figure uses it.
+//
+// Every rider starts at the dispatch hub, visits each stop, and returns.
+
+/** Dispatch hub (UrbanFootwear NG hub, Wuse — matches widget DEFAULT_ORIGIN_HUB). */
+export const DISPATCH_HUB = {
+  name: 'Abuja Central Hub',
+  formatted: 'FC-02-A09-AA-01',
+  coordinates: { lat: 9.0685, lng: 7.466 },
+};
+
+/** Urban road circuity: roads are ~30% longer than the straight line. */
+export const ROAD_CIRCUITY_FACTOR = 1.3;
+
+/** Typical delivery motorbike: ~35 km per litre. */
+export const LITRES_PER_KM = 1 / 35;
+
+const round2 = (n) => Math.round(n * 100) / 100;
+
+/** Estimated road distance between two coordinates, in km. */
+export function roadDistanceKm(a, b) {
+  return haversineDistanceKm(a, b) * ROAD_CIRCUITY_FACTOR;
+}
+
+/** Total km for hub → stops (in the given order) → hub. */
+export function tourDistanceKm(stops, hub = DISPATCH_HUB.coordinates, dist = roadDistanceKm) {
+  if (!stops.length) return 0;
+  let km = dist(hub, stops[0].coordinates);
+  for (let i = 0; i < stops.length - 1; i++) {
+    km += dist(stops[i].coordinates, stops[i + 1].coordinates);
+  }
+  km += dist(stops[stops.length - 1].coordinates, hub);
+  return km;
+}
+
+/**
+ * Sequence stops for one rider:
+ *   1. Nearest-neighbour: from the hub, always ride to the closest unvisited stop.
+ *   2. 2-opt: repeatedly reverse any section of the route that makes it shorter.
+ */
+export function optimiseStopSequence(stops, hub = DISPATCH_HUB.coordinates, dist = roadDistanceKm) {
+  const withCoords = stops.filter((s) => s.coordinates && !isNaN(Number(s.coordinates.lat)));
+  const withoutCoords = stops.filter((s) => !withCoords.includes(s));
+  if (withCoords.length < 3) {
+    // Nearest-neighbour alone is optimal for 0–2 stops.
+    const remaining = [...withCoords];
+    const route = [];
+    let current = hub;
+    while (remaining.length) {
+      let best = 0;
+      for (let i = 1; i < remaining.length; i++) {
+        if (dist(current, remaining[i].coordinates) < dist(current, remaining[best].coordinates)) best = i;
+      }
+      current = remaining[best].coordinates;
+      route.push(remaining.splice(best, 1)[0]);
+    }
+    return [...route, ...withoutCoords];
+  }
+
+  // 1. Nearest-neighbour construction
+  const remaining = [...withCoords];
+  let route = [];
+  let current = hub;
+  while (remaining.length) {
+    let best = 0;
+    let bestKm = Infinity;
+    for (let i = 0; i < remaining.length; i++) {
+      const km = dist(current, remaining[i].coordinates);
+      if (km < bestKm) {
+        bestKm = km;
+        best = i;
+      }
+    }
+    current = remaining[best].coordinates;
+    route.push(remaining.splice(best, 1)[0]);
+  }
+
+  // 2. 2-opt improvement
+  let improved = true;
+  let bestKm = tourDistanceKm(route, hub, dist);
+  while (improved) {
+    improved = false;
+    for (let i = 0; i < route.length - 1; i++) {
+      for (let k = i + 1; k < route.length; k++) {
+        const candidate = [...route.slice(0, i), ...route.slice(i, k + 1).reverse(), ...route.slice(k + 1)];
+        const km = tourDistanceKm(candidate, hub, dist);
+        if (km < bestKm - 1e-9) {
+          route = candidate;
+          bestKm = km;
+          improved = true;
+        }
+      }
+    }
+  }
+
+  return [...route, ...withoutCoords];
+}
+
+/**
+ * Baseline — dispatch WITHOUT PostBatch:
+ * parcels come off the unsorted pile in arrival order and are handed to the
+ * same number of riders in turn (rider 1, rider 2, rider 3, rider 1, …).
+ * Each rider delivers in the order they were handed the parcels.
+ */
+export function manualDispatchDistanceKm(orders, riderCount, hub = DISPATCH_HUB.coordinates, dist = roadDistanceKm) {
+  const riders = Array.from({ length: Math.max(1, riderCount) }, () => []);
+  orders
+    .filter((o) => o.coordinates && !isNaN(Number(o.coordinates.lat)))
+    .forEach((o, i) => riders[i % riders.length].push(o));
+  return riders.reduce((sum, stops) => sum + tourDistanceKm(stops, hub, dist), 0);
+}
+
+// =============================================================================
 // Core Module 2 Prefix-Clustering Function
 // =============================================================================
 
-export function clusterOrders(orders = []) {
-  const startTime = Date.now();
+export function clusterOrders(orders = [], { hub = DISPATCH_HUB.coordinates, distanceKm = roadDistanceKm, distanceSource = 'estimate' } = {}) {
+  const dist = distanceKm;
+  const startTime = (typeof performance !== 'undefined' ? performance : Date).now();
 
   if (!Array.isArray(orders) || orders.length === 0) {
     const emptyResult = [];
@@ -546,10 +670,11 @@ export function clusterOrders(orders = []) {
       totalRouteDistanceKm: 0,
       totalUnclusteredDistanceKm: 0,
       totalDistanceSavedKm: 0,
+      fuelSavedPercent: 0,
       estimatedFuelSavedPercent: 0,
       totalFuelSavedLitres: 0,
-      executionTimeMs: 0.1,
-      bannerText: '0 Orders Batched in 0.1s | 0 Rider Zones Assigned | 0% Est. Fuel Saved',
+      executionTimeMs: 0,
+      bannerText: '0 orders batched | 0 rider zones',
     };
     emptyResult.summary = emptyResult.metrics;
     return emptyResult;
@@ -591,43 +716,25 @@ export function clusterOrders(orders = []) {
   const batches = [];
   let batchIndex = 0;
 
-  for (const [districtKey, batchOrders] of districtGroups.entries()) {
-    // 2. Inside each batch, sort orders sequentially by segments.area and segments.unit
-    batchOrders.sort((a, b) => {
-      const areaA = String(a.segments?.area || '').toUpperCase();
-      const areaB = String(b.segments?.area || '').toUpperCase();
-      if (areaA !== areaB) {
-        return areaA.localeCompare(areaB);
-      }
-      const unitA = String(a.segments?.unit || '');
-      const unitB = String(b.segments?.unit || '');
-      return unitA.localeCompare(unitB, undefined, { numeric: true });
-    });
+  for (const [districtKey, groupOrders] of districtGroups.entries()) {
+    // 2. Sequence stops: nearest-neighbour + 2-opt from the hub
+    const arrivalOrder = [...groupOrders];
+    const batchOrders = optimiseStopSequence(groupOrders, hub, dist);
 
-    // Assign sequential stop numbers to each parcel
     batchOrders.forEach((o, idx) => {
       o.stopSequence = idx + 1;
       o.batchKey = districtKey;
     });
 
-    // 3. Calculate route metrics
-    let sequentialDistanceKm = 0;
-    for (let i = 0; i < batchOrders.length - 1; i++) {
-      const legDist = haversineDistanceKm(batchOrders[i].coordinates, batchOrders[i + 1].coordinates);
-      sequentialDistanceKm += legDist * 1.25; // 1.25 urban road circuity factor
-    }
-
-    const baseHubLegKm = batchOrders.length > 0 ? 1.8 : 0;
-    const estimatedRouteDistanceKm = parseFloat((sequentialDistanceKm + baseHubLegKm).toFixed(2));
-
-    // Calculate unclustered travel distance (benchmark 32% fuel savings)
-    const unclusteredDistanceKm = parseFloat((estimatedRouteDistanceKm / (1 - 0.32)).toFixed(2));
-    const distanceSavedKm = parseFloat((unclusteredDistanceKm - estimatedRouteDistanceKm).toFixed(2));
+    // 3. Route metrics (estimated road km, hub → stops → hub)
+    const estimatedRouteDistanceKm = round2(tourDistanceKm(batchOrders, hub, dist));
+    // Same stops, delivered in the order the parcels arrived (no sequencing)
+    const unclusteredDistanceKm = round2(tourDistanceKm(arrivalOrder, hub, dist));
+    const distanceSavedKm = round2(Math.max(0, unclusteredDistanceKm - estimatedRouteDistanceKm));
     const fuelSavedPercent = unclusteredDistanceKm > 0
-      ? Math.round(((unclusteredDistanceKm - estimatedRouteDistanceKm) / unclusteredDistanceKm) * 100)
-      : 32;
-
-    const fuelSavedLitres = parseFloat((distanceSavedKm * 0.028).toFixed(2));
+      ? Math.round((distanceSavedKm / unclusteredDistanceKm) * 100)
+      : 0;
+    const fuelSavedLitres = round2(distanceSavedKm * LITRES_PER_KM);
 
     const colorConfig = BATCH_COLORS[batchIndex % BATCH_COLORS.length];
     const firstOrder = batchOrders[0] || {};
@@ -635,9 +742,11 @@ export function clusterOrders(orders = []) {
     const lgaName = firstOrder.names?.lga || `LGA ${firstOrder.segments?.lga}`;
     const districtName = firstOrder.names?.district || `District ${firstOrder.segments?.district}`;
 
-    const routeCoordinates = batchOrders
+    const stopCoordinates = batchOrders
       .filter((o) => o.coordinates && typeof o.coordinates.lat === 'number' && typeof o.coordinates.lng === 'number')
       .map((o) => [o.coordinates.lat, o.coordinates.lng]);
+    const hubPoint = [hub.lat, hub.lng];
+    const routeCoordinates = stopCoordinates.length ? [hubPoint, ...stopCoordinates, hubPoint] : [];
 
     batches.push({
       batchId: `BATCH-${districtKey}`,
@@ -664,19 +773,19 @@ export function clusterOrders(orders = []) {
     batchIndex++;
   }
 
-  // Calculate cumulative fleet metrics
+  // Fleet totals: PostBatch routes vs. manual dispatch with the same number of riders
   const totalOrders = orders.length;
   const totalBatches = batches.length;
-  const totalRouteDistanceKm = parseFloat(batches.reduce((sum, b) => sum + b.estimatedRouteDistanceKm, 0).toFixed(2));
-  const totalUnclusteredDistanceKm = parseFloat(batches.reduce((sum, b) => sum + b.unclusteredDistanceKm, 0).toFixed(2));
-  const totalDistanceSavedKm = parseFloat((totalUnclusteredDistanceKm - totalRouteDistanceKm).toFixed(2));
+  const totalRouteDistanceKm = round2(batches.reduce((sum, b) => sum + b.estimatedRouteDistanceKm, 0));
+  const totalUnclusteredDistanceKm = round2(manualDispatchDistanceKm(orders, totalBatches, hub, dist));
+  const totalDistanceSavedKm = round2(Math.max(0, totalUnclusteredDistanceKm - totalRouteDistanceKm));
   const overallFuelSavedPercent = totalUnclusteredDistanceKm > 0
-    ? Math.round(((totalUnclusteredDistanceKm - totalRouteDistanceKm) / totalUnclusteredDistanceKm) * 100)
-    : 32;
-  const totalFuelSavedLitres = parseFloat((totalDistanceSavedKm * 0.028).toFixed(2));
+    ? Math.round((totalDistanceSavedKm / totalUnclusteredDistanceKm) * 100)
+    : 0;
+  const totalFuelSavedLitres = round2(totalDistanceSavedKm * LITRES_PER_KM);
 
-  const rawElapsed = (Date.now() - startTime) / 1000;
-  const executionTimeSec = rawElapsed > 0.05 ? rawElapsed.toFixed(1) : '0.3';
+  const elapsedMs = (typeof performance !== 'undefined' ? performance : Date).now() - startTime;
+  const executionTimeMs = Math.round(elapsedMs * 10) / 10;
 
   const metrics = {
     totalOrders,
@@ -687,9 +796,10 @@ export function clusterOrders(orders = []) {
     fuelSavedPercent: overallFuelSavedPercent,
     estimatedFuelSavedPercent: overallFuelSavedPercent,
     totalFuelSavedLitres,
-    executionTimeMs: Math.max(0.3, parseFloat(((Date.now() - startTime) || 0.3).toFixed(1))),
-    executionTimeSec: `${executionTimeSec}s`,
-    bannerText: `${totalOrders} Orders Batched in ${executionTimeSec}s | ${totalBatches} Rider Zones Assigned | ${overallFuelSavedPercent}% Est. Fuel Saved`,
+    distanceSource,
+    executionTimeMs,
+    executionTimeSec: `${(executionTimeMs / 1000).toFixed(3)}s`,
+    bannerText: `${totalOrders} orders batched in ${executionTimeMs}ms | ${totalBatches} rider zones | ${totalRouteDistanceKm} km vs ${totalUnclusteredDistanceKm} km manual (${overallFuelSavedPercent}% less distance)`,
   };
 
   batches.batches = batches;
@@ -797,7 +907,7 @@ if (typeof process !== 'undefined' && process.argv && process.argv[1] && process
   console.log('\nBatches:');
   for (const b of result) {
     console.log(`→ Batch: ${b.batchId} | ${b.zoneName} (${b.riderName})`);
-    console.log(`  Parcels: ${b.totalOrders} | Est. Route Distance: ${b.estimatedRouteDistanceKm}km | Est. Fuel Saved: ${b.fuelSavedPercent}% (${b.fuelSavedLitres}L)`);
+    console.log(`  Parcels: ${b.totalOrders} | Route: ${b.estimatedRouteDistanceKm}km (unsequenced ${b.unclusteredDistanceKm}km, ${b.fuelSavedPercent}% shorter)`);
     console.log(`  Stops sequence: ${b.orders.map((o) => `${o.segments.area}-${o.segments.unit} (${o.customerName})`).join(' → ')}`);
   }
   console.log('\n✓ Prefix-Clustering Engine Module 2 verified successfully.\n');
@@ -806,6 +916,11 @@ if (typeof process !== 'undefined' && process.argv && process.argv[1] && process
 export default {
   clusterOrders,
   haversineDistanceKm,
+  roadDistanceKm,
+  tourDistanceKm,
+  optimiseStopSequence,
+  manualDispatchDistanceKm,
+  DISPATCH_HUB,
   parse5SegmentPostcode,
   SEED_ORDERS,
   parsePostcode,

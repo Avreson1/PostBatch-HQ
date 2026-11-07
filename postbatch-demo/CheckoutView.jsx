@@ -13,6 +13,17 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  BadgeCheck,
+  CircleCheck,
+  Footprints,
+  Loader2,
+  LocateFixed,
+  PackageCheck,
+  ShoppingBag,
+  Truck,
+} from 'lucide-react';
 import {
   formatPostcode,
   parse5SegmentPostcode,
@@ -23,8 +34,6 @@ import {
   verifyPostcode,
   detectPostcodeViaGPS,
   lookupPostcodeOffline,
-  NIPOST_API_KEY,
-  NIPOST_API_URL,
 } from './src/services/nipostApi.js';
 
 // Comprehensive presets for presentation
@@ -108,6 +117,7 @@ export default function CheckoutView({
           isLive: result.isLive,
           fallbackTriggered: result.fallbackTriggered,
           fallbackReason: result.fallbackReason,
+          nipost: result.nipost,
         });
       } else {
         const offline = lookupPostcodeOffline(codeInput, {
@@ -195,6 +205,7 @@ export default function CheckoutView({
             isLive: result.isLive,
             fallbackTriggered: result.fallbackTriggered,
             fallbackReason: result.fallbackReason,
+            nipost: result.nipost,
           });
         }
       } catch (err) {
@@ -266,19 +277,19 @@ export default function CheckoutView({
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-slate-50 py-8 px-4 flex items-center justify-center">
+    <div className="h-full w-full overflow-y-auto bg-slate-100 py-8 px-4 flex items-center justify-center">
       {/* Centered Shopify / WooCommerce Checkout Card */}
-      <div className="w-full max-w-lg bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-7 space-y-6 my-auto">
+      <div className="w-full max-w-lg bg-white rounded-lg shadow-card p-6 sm:p-7 space-y-6 my-auto">
         
         {/* Merchant Header / Stepper */}
-        <div className="border-b border-slate-100 pb-4">
+        <div className="pb-1">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                🛍️
+              <div className="w-8 h-8 rounded-md bg-slate-900 flex items-center justify-center text-white">
+                <ShoppingBag size={16} />
               </div>
               <div>
-                <h1 className="text-base font-bold text-slate-800 leading-tight">
+                <h1 className="text-base font-semibold text-slate-900 tracking-tight leading-tight">
                   UrbanFootwear NG
                 </h1>
                 <p className="text-xs text-slate-500">
@@ -286,7 +297,7 @@ export default function CheckoutView({
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-slate-100 text-slate-600">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Checkout Mode
             </span>
@@ -297,7 +308,7 @@ export default function CheckoutView({
             <span className="text-slate-400">1. Cart</span>
             <span className="text-slate-300">/</span>
             <span className="text-indigo-600 font-semibold flex items-center gap-1">
-              <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] flex items-center justify-center font-bold">
+              <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] flex items-center justify-center font-semibold">
                 2
               </span>
               Shipping &amp; Address
@@ -322,7 +333,7 @@ export default function CheckoutView({
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="e.g. Amina Bello"
-                className="w-full px-3 py-2 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                className="w-full px-3 py-2 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
               />
             </div>
             <div>
@@ -334,7 +345,7 @@ export default function CheckoutView({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="e.g. 08031234567"
-                className="w-full px-3 py-2 text-sm font-mono text-slate-800 bg-white border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                className="w-full px-3 py-2 text-sm font-mono text-slate-800 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
               />
             </div>
           </div>
@@ -347,7 +358,7 @@ export default function CheckoutView({
               value={streetAddress}
               onChange={(e) => setStreetAddress(e.target.value)}
               placeholder="e.g. 12 Marina Road, Wuse Zone 4, Abuja"
-              className="w-full px-3 py-2 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              className="w-full px-3 py-2 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
             />
           </div>
         </div>
@@ -359,7 +370,7 @@ export default function CheckoutView({
               <label className="text-sm font-semibold text-slate-800">
                 NIPOST Digital Postcode
               </label>
-              <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 uppercase tracking-wide">
+              <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded uppercase tracking-wide">
                 SDK v0.3
               </span>
             </div>
@@ -376,7 +387,7 @@ export default function CheckoutView({
               onChange={(e) => handlePostcodeChange(e.target.value)}
               placeholder="AA-99-H77-BB-55"
               maxLength={15}
-              className={`w-full px-4 py-2.5 font-mono text-base font-bold tracking-wider rounded-lg border shadow-sm transition-colors outline-none uppercase ${
+              className={`w-full px-4 py-2.5 font-mono text-base font-semibold tracking-wider rounded-lg border shadow-sm transition-colors outline-none uppercase ${
                 verifiedPayload
                   ? 'border-indigo-500 bg-indigo-50/20 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
                   : 'border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
@@ -384,13 +395,11 @@ export default function CheckoutView({
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {isVerifying ? (
-                <span className="text-xs text-indigo-600 font-semibold animate-spin">
-                  ⏳
-                </span>
+                <Loader2 size={16} className="text-indigo-600 animate-spin" />
               ) : verifiedPayload ? (
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
-                  ✓
-                </span>
+                <motion.span initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-emerald-600 flex">
+                  <CircleCheck size={18} />
+                </motion.span>
               ) : null}
             </div>
           </div>
@@ -400,7 +409,7 @@ export default function CheckoutView({
             <div className="flex items-center justify-between text-[11px] text-slate-500">
               <span>Format: State-LGA-District-Area-Unit</span>
               {isLiveMode ? (
-                <span className="text-emerald-600 font-medium flex items-center gap-1">
+                <span className="text-emerald-700 font-medium flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live NIPOST API
                 </span>
               ) : (
@@ -413,20 +422,20 @@ export default function CheckoutView({
                 type="button"
                 onClick={handleDetectGPS}
                 disabled={isGpsLoading}
-                className="flex-1 py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="flex-1 min-w-0 whitespace-nowrap h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                <span>{isGpsLoading ? '⏳' : '🎯'}</span>
-                <span>{isGpsLoading ? 'Resolving GPS…' : 'Detect Postcode via GPS'}</span>
+                {isGpsLoading ? <Loader2 size={14} className="animate-spin shrink-0" /> : <LocateFixed size={14} className="shrink-0" />}
+                <span className="truncate">{isGpsLoading ? 'Resolving GPS…' : 'Detect Postcode via GPS'}</span>
               </button>
 
               {/* Demo Preset Selector */}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <select
                   onChange={handleSelectPreset}
                   value={rawInput}
-                  className="w-full py-1.5 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors cursor-pointer outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full h-8 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-md transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/40"
                 >
-                  <option value="" disabled>⚡ Demo Presets…</option>
+                  <option value="" disabled>Demo presets…</option>
                   {ALL_PRESETS.map((p) => (
                     <option key={p.postcode} value={p.formatted}>
                       {p.formatted} — {p.label}
@@ -438,38 +447,47 @@ export default function CheckoutView({
           </div>
 
           {/* Auto-Resolved Administrative Hierarchy */}
+          <AnimatePresence initial={false}>
           {verifiedPayload && (
-            <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+            <motion.div
+              key="hierarchy"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="overflow-hidden"
+            >
+            <div className="mt-3 p-3 bg-slate-100 rounded-md space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-700 flex items-center gap-1">
-                  <span className="text-emerald-600">✓</span> Verified Postal Hierarchy
+                  <BadgeCheck size={14} className="text-emerald-600" /> Verified postal hierarchy
                 </span>
-                <span className="font-mono text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                <span className="font-mono text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
                   {verifiedPayload.formatted}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                <div className="p-2 bg-white rounded border border-slate-200">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">State</span>
+                <div className="p-2 bg-white rounded">
+                  <span className="text-[10px] uppercase font-semibold text-slate-500 block">State</span>
                   <span className="font-semibold text-slate-800 block truncate" title={verifiedPayload.names.state}>
                     {verifiedPayload.names.state}
                   </span>
                 </div>
-                <div className="p-2 bg-white rounded border border-slate-200">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">LGA</span>
+                <div className="p-2 bg-white rounded">
+                  <span className="text-[10px] uppercase font-semibold text-slate-500 block">LGA</span>
                   <span className="font-semibold text-slate-800 block truncate" title={verifiedPayload.names.lga}>
                     {verifiedPayload.names.lga}
                   </span>
                 </div>
-                <div className="p-2 bg-indigo-50/60 rounded border border-indigo-200">
-                  <span className="text-[10px] uppercase font-bold text-indigo-700 block">District</span>
-                  <span className="font-bold text-indigo-900 block truncate" title={verifiedPayload.names.district}>
+                <div className="p-2 bg-indigo-50 rounded">
+                  <span className="text-[10px] uppercase font-semibold text-indigo-700 block">District</span>
+                  <span className="font-semibold text-indigo-900 block truncate" title={verifiedPayload.names.district}>
                     {verifiedPayload.names.district}
                   </span>
                 </div>
-                <div className="p-2 bg-white rounded border border-slate-200">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Area / Drop</span>
+                <div className="p-2 bg-white rounded">
+                  <span className="text-[10px] uppercase font-semibold text-slate-500 block">Area / Drop</span>
                   <span className="font-semibold text-slate-800 block truncate" title={verifiedPayload.names.area}>
                     {verifiedPayload.names.area}
                   </span>
@@ -477,29 +495,31 @@ export default function CheckoutView({
               </div>
 
               {/* Dynamic Shipping Badge */}
-              <div className="flex items-center justify-between p-2 rounded bg-indigo-50/70 border border-indigo-200 text-xs">
+              <div className="flex items-center justify-between p-2 rounded bg-indigo-50 text-xs">
                 <div className="flex items-center gap-1.5 text-indigo-900 font-medium">
-                  <span>🚚</span>
+                  <Truck size={14} />
                   <span>{verifiedPayload.shippingLabel}</span>
                 </div>
-                <span className="font-mono font-bold text-indigo-900">
+                <span className="font-mono font-semibold text-indigo-900">
                   ₦{verifiedPayload.shippingFee.toLocaleString()}
                 </span>
               </div>
             </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
 
         {/* Order Summary & Pricing Breakdown */}
-        <div className="space-y-3 pt-2 border-t border-slate-100">
+        <div className="space-y-3 pt-2">
           <h2 className="text-sm font-semibold text-slate-800">
             Order Summary
           </h2>
 
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="flex items-center justify-between p-3 bg-slate-100 rounded-md">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-lg shadow-sm">
-                👟
+              <div className="w-10 h-10 rounded-md bg-slate-900 flex items-center justify-center text-white">
+                <Footprints size={18} />
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-800">
@@ -529,8 +549,8 @@ export default function CheckoutView({
               </span>
             </div>
             <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline text-sm">
-              <span className="font-bold text-slate-800">Total</span>
-              <span className="font-mono font-extrabold text-indigo-600 text-base">
+              <span className="font-semibold text-slate-800">Total</span>
+              <span className="font-mono font-semibold text-indigo-600 text-base">
                 ₦{totalAmount.toLocaleString()}
               </span>
             </div>
@@ -543,14 +563,14 @@ export default function CheckoutView({
             type="button"
             onClick={handleSubmitOrder}
             disabled={!verifiedPayload || isVerifying}
-            className={`w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer ${
+            className={`w-full min-w-0 whitespace-nowrap h-10 px-4 rounded-md font-medium text-sm transition-all active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer ${
               verifiedPayload && !isVerifying
                 ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
             }`}
           >
-            <span>📦</span>
-            <span>
+            {isVerifying ? <Loader2 size={15} className="animate-spin shrink-0" /> : <PackageCheck size={15} className="shrink-0" />}
+            <span className="truncate">
               {isVerifying
                 ? 'Verifying Postcode…'
                 : verifiedPayload
@@ -558,7 +578,7 @@ export default function CheckoutView({
                 : 'Enter Valid Postcode to Continue'}
             </span>
           </button>
-          <p className="text-[11px] text-slate-400 text-center mt-2">
+          <p className="text-[11px] text-slate-500 text-center mt-2">
             Order routes directly into the PostBatch Fleet Dispatch Hub
           </p>
         </div>
